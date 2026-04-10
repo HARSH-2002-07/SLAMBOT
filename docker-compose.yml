@@ -1,0 +1,55 @@
+version: '3.8'
+
+# Shared environment for all services
+x-ros-env: &ros-env
+  ROS_DOMAIN_ID: 0
+  DISPLAY: ${DISPLAY:-:0}
+  GAZEBO_MODEL_PATH: /ros2_ws/install/slam_nav_robot/share/slam_nav_robot/worlds
+
+services:
+
+  # ── Robot simulation + Nav2 (headless) ───────────────────────
+  slam_nav:
+    build:
+      context: .
+      target: runtime
+    image: slam_nav_robot:latest
+    container_name: slam_nav_robot
+    environment:
+      <<: *ros-env
+    volumes:
+      # Mount maps directory so saved maps persist outside container
+      - ./maps:/ros2_ws/maps
+      - ./bags:/ros2_ws/bags
+      # Allow GUI apps (RViz2, Gazebo) via X11
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    network_mode: host
+    privileged: true
+    command: >
+      ros2 launch slam_nav_robot full_nav.launch.py
+
+  # ── Waypoint mission runner (runs after nav stack is up) ─────
+  waypoint_runner:
+    image: slam_nav_robot:latest
+    container_name: waypoint_runner
+    environment:
+      <<: *ros-env
+    network_mode: host
+    depends_on:
+      - slam_nav
+    command: >
+      bash -c "sleep 15 &&
+               ros2 run slam_nav_robot waypoint_navigator"
+
+  # ── Localisation metrics logger ───────────────────────────────
+  nav_metrics:
+    image: slam_nav_robot:latest
+    container_name: nav_metrics
+    environment:
+      <<: *ros-env
+    network_mode: host
+    depends_on:
+      - slam_nav
+    command: >
+      bash -c "sleep 12 &&
+               ros2 run slam_nav_robot nav_metrics"

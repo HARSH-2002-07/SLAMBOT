@@ -14,7 +14,6 @@ from datetime import datetime
 
 import rclpy
 from rclpy.node import Node
-from rclpy.parameter import Parameter
 
 
 class MapSaverNode(Node):
@@ -23,7 +22,8 @@ class MapSaverNode(Node):
         super().__init__('map_saver_node')
 
         self.declare_parameter('map_name', '')
-        self.declare_parameter('save_dir', os.path.expanduser('~/slam_nav_ws/maps'))
+        self.declare_parameter(
+            'save_dir', os.path.expanduser('~/slam_nav_ws/maps'))
 
         map_name = self.get_parameter('map_name').value
         save_dir = self.get_parameter('save_dir').value

@@ -22,8 +22,8 @@ class NavMetrics(Node):
 
         self._amcl_x = None
         self._amcl_y = None
-        self._gt_x   = None
-        self._gt_y   = None
+        self._gt_x = None
+        self._gt_y = None
         self._errors = []
 
         self.create_subscription(
@@ -61,11 +61,11 @@ class NavMetrics(Node):
 
     def _log_error(self):
         if None in (self._amcl_x, self._amcl_y,
-                    self._gt_x,   self._gt_y):
+                    self._gt_x, self._gt_y):
             return
 
-        error_m  = math.hypot(self._amcl_x - self._gt_x,
-                              self._amcl_y - self._gt_y)
+        error_m = math.hypot(self._amcl_x - self._gt_x,
+                             self._amcl_y - self._gt_y)
         error_cm = error_m * 100.0
         self._errors.append(error_cm)
         avg_cm = sum(self._errors) / len(self._errors)

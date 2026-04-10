@@ -17,8 +17,8 @@ def generate_launch_description():
     pkg_gazebo_ros = get_package_share_directory('gazebo_ros')
 
     # ── Paths ──────────────────────────────────────────────────
-    xacro_file    = os.path.join(pkg_share, 'description', 'robot.urdf.xacro')
-    world_file    = os.path.join(pkg_share, 'worlds', 'room.world')
+    xacro_file = os.path.join(pkg_share, 'description', 'robot.urdf.xacro')
+    world_file = os.path.join(pkg_share, 'worlds', 'room.world')
 
     # ── Launch Arguments ───────────────────────────────────────
     use_sim_time_arg = DeclareLaunchArgument(

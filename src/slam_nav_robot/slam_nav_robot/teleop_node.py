@@ -19,12 +19,12 @@ from geometry_msgs.msg import Twist
 
 
 # Terminal key codes
-KEY_W     = 'w'
-KEY_S     = 's'
-KEY_A     = 'a'
-KEY_D     = 'd'
+KEY_W = 'w'
+KEY_S = 's'
+KEY_A = 'a'
+KEY_D = 'd'
 KEY_SPACE = ' '
-KEY_Q     = 'q'
+KEY_Q = 'q'
 
 BANNER = """
 ┌─────────────────────────────────┐
@@ -40,10 +40,10 @@ BANNER = """
 """
 
 # Speed settings
-LINEAR_STEP  = 0.05   # m/s per keypress
+LINEAR_STEP = 0.05   # m/s per keypress
 ANGULAR_STEP = 0.1    # rad/s per keypress
-MAX_LINEAR   = 0.3    # m/s
-MAX_ANGULAR  = 1.5    # rad/s
+MAX_LINEAR = 0.3    # m/s
+MAX_ANGULAR = 1.5    # rad/s
 
 
 def get_key(settings):
@@ -67,18 +67,18 @@ class TeleopNode(Node):
     def __init__(self):
         super().__init__('teleop_node')
         self.publisher = self.create_publisher(Twist, 'cmd_vel', 10)
-        self.linear  = 0.0
+        self.linear = 0.0
         self.angular = 0.0
         self.get_logger().info('Teleop node started. Press q to quit.')
 
     def publish_velocity(self):
         msg = Twist()
-        msg.linear.x  = self.linear
+        msg.linear.x = self.linear
         msg.angular.z = self.angular
         self.publisher.publish(msg)
 
     def stop(self):
-        self.linear  = 0.0
+        self.linear = 0.0
         self.angular = 0.0
         self.publish_velocity()
 

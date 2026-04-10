@@ -14,7 +14,6 @@ from typing import List, Tuple
 import rclpy
 from rclpy.node import Node
 from rclpy.action import ActionClient
-from rclpy.duration import Duration
 from action_msgs.msg import GoalStatus
 from geometry_msgs.msg import PoseStamped
 from nav2_msgs.action import NavigateToPose
@@ -23,8 +22,8 @@ from nav2_msgs.action import NavigateToPose
 # ── Waypoints (x, y, yaw_degrees) ─────────────────────────────────────────
 # These are positions inside room.world. Adjust if your map origin differs.
 WAYPOINTS: List[Tuple[float, float, float]] = [
-    ( 1.5,  1.5,   0.0),   # far corner near box_1
-    ( 2.0, -1.5,  90.0),   # near cylinder_1
+    (1.5, 1.5, 0.0),   # far corner near box_1
+    (2.0, -1.5, 90.0),   # near cylinder_1
     (-1.5, -1.0, 180.0),   # near box_2
     (-2.0, -2.0, 270.0),   # back to start area
 ]
@@ -115,11 +114,12 @@ class WaypointNavigator(Node):
 
     def _print_summary(self):
         succeeded = sum(1 for _, ok, _ in self._results if ok)
-        total     = len(self._results)
-        total_t   = sum(t for _, _, t in self._results)
+        total = len(self._results)
+        total_t = sum(t for _, _, t in self._results)
 
         self.get_logger().info('─' * 50)
-        self.get_logger().info(f'Mission complete: {succeeded}/{total} waypoints reached')
+        self.get_logger().info(
+            f'Mission complete: {succeeded}/{total} waypoints reached')
         self.get_logger().info(f'Total time: {total_t:.1f}s')
         self.get_logger().info('─' * 50)
 
