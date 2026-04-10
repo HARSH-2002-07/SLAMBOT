@@ -1,0 +1,18 @@
+# ROS2 build artifacts
+build/
+install/
+log/
+*.pyc
+__pycache__/
+.colcon_install_layout
+
+# Gazebo
+.gazebo/
+
+# Maps (large binary files)
+*.pgm
+
+# Editor
+.vscode/
+.idea/
+*.swp
