@@ -6,7 +6,7 @@ package_name = 'slam_nav_robot'
 
 setup(
     name=package_name,
-    version='0.0.1',
+    version='0.0.2',
     packages=find_packages(exclude=['test']),
     data_files=[
         ('share/ament_index/resource_index/packages',
@@ -30,7 +30,9 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'teleop_node = slam_nav_robot.teleop_node:main',
+            'teleop_node   = slam_nav_robot.teleop_node:main',
+            'map_saver     = slam_nav_robot.map_saver:main',
+            'bag_recorder  = slam_nav_robot.bag_recorder:main',
         ],
     },
 )

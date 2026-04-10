@@ -1,0 +1,71 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+  - Class: rviz_common/Views
+    Name: Views
+
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Alpha: 0.3
+      Cell Size: 0.5
+      Class: rviz_default_plugins/Grid
+      Color: 160; 160; 164
+      Name: Grid
+      Plane: XY
+
+    - Class: rviz_default_plugins/RobotModel
+      Description Topic:
+        Topic: /robot_description
+      Enabled: true
+      Name: RobotModel
+
+    - Class: rviz_default_plugins/LaserScan
+      Color: 255; 80; 0
+      Enabled: true
+      Name: LaserScan
+      Size (m): 0.04
+      Topic:
+        Topic: /scan
+
+    - Alpha: 0.8
+      Class: rviz_default_plugins/Map
+      Color Scheme: map
+      Draw Behind: false
+      Enabled: true
+      Name: Map
+      Topic:
+        Depth: 1
+        Durability Policy: Transient Local
+        Topic: /map
+
+    - Class: rviz_default_plugins/TF
+      Enabled: true
+      Frame Timeout: 15
+      Name: TF
+      Show Arrows: false
+      Show Axes: true
+      Show Names: true
+
+    - Class: rviz_default_plugins/Odometry
+      Covariance:
+        Enabled: false
+      Enabled: true
+      Name: Odometry
+      Topic:
+        Topic: /odom
+      Shape: Arrow
+      Color: 255; 220; 0
+
+    - Class: rviz_default_plugins/Path
+      Color: 0; 200; 100
+      Enabled: true
+      Name: Path
+      Topic:
+        Topic: /slam_toolbox/feedback
+
+  Global Options:
+    Background Color: 30; 30; 30
+    Fixed Frame: map
+
+  Value: true

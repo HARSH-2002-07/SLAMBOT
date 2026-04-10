@@ -2,6 +2,8 @@
 build/
 install/
 log/
+bags/
+maps/
 *.pyc
 __pycache__/
 .colcon_install_layout
