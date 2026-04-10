@@ -33,6 +33,8 @@ setup(
             'teleop_node   = slam_nav_robot.teleop_node:main',
             'map_saver     = slam_nav_robot.map_saver:main',
             'bag_recorder  = slam_nav_robot.bag_recorder:main',
+            'waypoint_navigator = slam_nav_robot.waypoint_navigator:main',
+            'nav_metrics        = slam_nav_robot.nav_metrics:main',
         ],
     },
 )
