@@ -1,0 +1,293 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="diff_bot">
+
+  <!-- ═══════════════════════════════════════
+       ARGS  (pass from launch file)
+       robot_name : unique entity name in Gazebo   e.g. robot_1
+       robot_ns   : ROS namespace, NO leading slash e.g. robot_1
+  ═══════════════════════════════════════ -->
+  <xacro:arg name="robot_name" default="robot_1"/>
+  <xacro:arg name="robot_ns"   default="robot_1"/>
+
+  <!-- ═══════════════════════════════════════
+       PROPERTIES
+  ═══════════════════════════════════════ -->
+  <xacro:property name="chassis_length" value="0.30"/>
+  <xacro:property name="chassis_width"  value="0.25"/>
+  <xacro:property name="chassis_height" value="0.08"/>
+  <xacro:property name="chassis_mass"   value="1.5"/>
+
+  <xacro:property name="wheel_radius"   value="0.05"/>
+  <xacro:property name="wheel_width"    value="0.03"/>
+  <xacro:property name="wheel_mass"     value="0.1"/>
+  <xacro:property name="wheel_offset_y" value="0.14"/>
+  <xacro:property name="wheel_offset_z" value="-0.02"/>
+
+  <xacro:property name="caster_radius"  value="0.02"/>
+  <xacro:property name="caster_mass"    value="0.05"/>
+
+  <xacro:property name="lidar_radius"   value="0.025"/>
+  <xacro:property name="lidar_height"   value="0.04"/>
+  <xacro:property name="lidar_mass"     value="0.1"/>
+
+  <!-- ═══════════════════════════════════════
+       INERTIA MACROS
+  ═══════════════════════════════════════ -->
+  <xacro:macro name="box_inertia" params="m l w h">
+    <inertial>
+      <mass value="${m}"/>
+      <inertia
+        ixx="${m*(w*w+h*h)/12}" ixy="0" ixz="0"
+        iyy="${m*(l*l+h*h)/12}" iyz="0"
+        izz="${m*(l*l+w*w)/12}"/>
+    </inertial>
+  </xacro:macro>
+
+  <xacro:macro name="cylinder_inertia" params="m r h">
+    <inertial>
+      <mass value="${m}"/>
+      <inertia
+        ixx="${m*(3*r*r+h*h)/12}" ixy="0" ixz="0"
+        iyy="${m*(3*r*r+h*h)/12}" iyz="0"
+        izz="${m*r*r/2}"/>
+    </inertial>
+  </xacro:macro>
+
+  <xacro:macro name="sphere_inertia" params="m r">
+    <inertial>
+      <mass value="${m}"/>
+      <inertia
+        ixx="${2*m*r*r/5}" ixy="0" ixz="0"
+        iyy="${2*m*r*r/5}" iyz="0"
+        izz="${2*m*r*r/5}"/>
+    </inertial>
+  </xacro:macro>
+
+  <!-- ═══════════════════════════════════════
+       BASE FOOTPRINT  (ground-plane reference)
+  ═══════════════════════════════════════ -->
+  <link name="base_footprint"/>
+
+  <joint name="base_footprint_joint" type="fixed">
+    <parent link="base_footprint"/>
+    <child  link="base_link"/>
+    <origin xyz="0 0 ${wheel_radius}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- ═══════════════════════════════════════
+       CHASSIS
+  ═══════════════════════════════════════ -->
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <box size="${chassis_length} ${chassis_width} ${chassis_height}"/>
+      </geometry>
+      <material name="blue">
+        <color rgba="0.2 0.4 0.8 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="${chassis_length} ${chassis_width} ${chassis_height}"/>
+      </geometry>
+    </collision>
+    <xacro:box_inertia m="${chassis_mass}"
+      l="${chassis_length}" w="${chassis_width}" h="${chassis_height}"/>
+  </link>
+
+  <!-- ═══════════════════════════════════════
+       WHEEL MACRO
+  ═══════════════════════════════════════ -->
+  <xacro:macro name="wheel" params="name y_reflect">
+    <link name="${name}_wheel">
+      <visual>
+        <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+        </geometry>
+        <material name="dark_grey">
+          <color rgba="0.15 0.15 0.15 1.0"/>
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+        </geometry>
+      </collision>
+      <xacro:cylinder_inertia m="${wheel_mass}"
+        r="${wheel_radius}" h="${wheel_width}"/>
+    </link>
+
+    <joint name="${name}_wheel_joint" type="continuous">
+      <parent link="base_link"/>
+      <child  link="${name}_wheel"/>
+      <origin xyz="-0.05 ${y_reflect * wheel_offset_y} ${wheel_offset_z}"
+              rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:wheel name="left"  y_reflect="1"/>
+  <xacro:wheel name="right" y_reflect="-1"/>
+
+  <!-- ═══════════════════════════════════════
+       CASTER WHEEL  (front)
+  ═══════════════════════════════════════ -->
+  <link name="caster_wheel">
+    <visual>
+      <geometry>
+        <sphere radius="${caster_radius}"/>
+      </geometry>
+      <material name="light_grey">
+        <color rgba="0.7 0.7 0.7 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <sphere radius="${caster_radius}"/>
+      </geometry>
+    </collision>
+    <xacro:sphere_inertia m="${caster_mass}" r="${caster_radius}"/>
+  </link>
+
+  <joint name="caster_wheel_joint" type="fixed">
+    <parent link="base_link"/>
+    <child  link="caster_wheel"/>
+    <origin xyz="${chassis_length/2 - 0.03} 0 ${-chassis_height/2 - caster_radius + 0.01}"
+            rpy="0 0 0"/>
+    <!-- Frictionless caster — no lateral resistance -->
+    <dynamics damping="0.0" friction="0.0"/>
+  </joint>
+
+  <!-- Gazebo frictionless surface for caster -->
+  <gazebo reference="caster_wheel">
+    <mu1>0.0</mu1>
+    <mu2>0.0</mu2>
+    <kp>1000000.0</kp>
+    <kd>100.0</kd>
+  </gazebo>
+
+  <!-- ═══════════════════════════════════════
+       LIDAR LINK  (was missing — added)
+  ═══════════════════════════════════════ -->
+  <link name="lidar_link">
+    <visual>
+      <geometry>
+        <cylinder radius="${lidar_radius}" length="${lidar_height}"/>
+      </geometry>
+      <material name="black">
+        <color rgba="0.1 0.1 0.1 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder radius="${lidar_radius}" length="${lidar_height}"/>
+      </geometry>
+    </collision>
+    <xacro:cylinder_inertia m="${lidar_mass}"
+      r="${lidar_radius}" h="${lidar_height}"/>
+  </link>
+
+  <joint name="lidar_joint" type="fixed">
+    <parent link="base_link"/>
+    <child  link="lidar_link"/>
+    <origin xyz="0.05 0 ${chassis_height/2 + lidar_height/2}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- ═══════════════════════════════════════
+       GAZEBO MATERIAL COLOURS
+  ═══════════════════════════════════════ -->
+  <gazebo reference="base_link">
+    <material>Gazebo/Blue</material>
+  </gazebo>
+  <gazebo reference="left_wheel">
+    <material>Gazebo/DarkGrey</material>
+    <mu1>1.0</mu1>
+    <mu2>1.0</mu2>
+  </gazebo>
+  <gazebo reference="right_wheel">
+    <material>Gazebo/DarkGrey</material>
+    <mu1>1.0</mu1>
+    <mu2>1.0</mu2>
+  </gazebo>
+  <gazebo reference="lidar_link">
+    <material>Gazebo/Black</material>
+  </gazebo>
+
+  <!-- ═══════════════════════════════════════
+       DIFFERENTIAL DRIVE PLUGIN
+       FIX: use $(arg robot_ns) not <xacro:arg>
+            no leading slash on robot_ns
+  ═══════════════════════════════════════ -->
+  <gazebo>
+    <plugin name="diff_drive" filename="libgazebo_ros_diff_drive.so">
+      <ros>
+        <namespace>$(arg robot_ns)</namespace>
+      </ros>
+      <left_joint>left_wheel_joint</left_joint>
+      <right_joint>right_wheel_joint</right_joint>
+      <wheel_separation>0.3</wheel_separation>
+      <wheel_diameter>0.1</wheel_diameter>
+      <max_wheel_torque>20</max_wheel_torque>
+      <max_wheel_acceleration>1.0</max_wheel_acceleration>
+      <publish_odom>true</publish_odom>
+      <publish_odom_tf>true</publish_odom_tf>
+      <publish_wheel_tf>false</publish_wheel_tf>
+      <!-- FIX: frame names must match namespace, no leading slash -->
+      <odometry_frame>$(arg robot_ns)/odom</odometry_frame>
+      <robot_base_frame>$(arg robot_ns)/base_footprint</robot_base_frame>
+    </plugin>
+  </gazebo>
+
+  <!-- ═══════════════════════════════════════
+       LIDAR SENSOR PLUGIN
+       FIX: $(arg robot_ns) substitution
+            frame_name matches namespaced TF tree
+  ═══════════════════════════════════════ -->
+  <gazebo reference="lidar_link">
+    <sensor type="ray" name="lidar">
+      <always_on>true</always_on>
+      <update_rate>10</update_rate>
+      <pose>0 0 0 0 0 0</pose>
+      <visualize>false</visualize>
+      <ray>
+        <scan>
+          <horizontal>
+            <samples>360</samples>
+            <resolution>1</resolution>
+            <min_angle>-3.14159</min_angle>
+            <max_angle>3.14159</max_angle>
+          </horizontal>
+        </scan>
+        <range>
+          <min>0.12</min>
+          <max>10.0</max>
+          <resolution>0.01</resolution>
+        </range>
+        <noise>
+          <type>gaussian</type>
+          <mean>0.0</mean>
+          <stddev>0.01</stddev>
+        </noise>
+      </ray>
+      <plugin name="lidar_plugin" filename="libgazebo_ros_ray_sensor.so">
+        <ros>
+          <namespace>$(arg robot_ns)</namespace>
+          <remapping>~/out:=scan</remapping>
+        </ros>
+        <output_type>sensor_msgs/LaserScan</output_type>
+        <!-- FIX: frame_name must match namespaced TF frame -->
+        <frame_name>$(arg robot_ns)/lidar_link</frame_name>
+      </plugin>
+    </sensor>
+  </gazebo>
+
+  <!-- ═══════════════════════════════════════
+       NOTE: xacro:include for slam_nav_robot
+       removed — plugins are fully defined here.
+       Do NOT re-add robot_gazebo.xacro or you
+       will get duplicate plugin registration.
+  ═══════════════════════════════════════ -->
+
+</robot>
