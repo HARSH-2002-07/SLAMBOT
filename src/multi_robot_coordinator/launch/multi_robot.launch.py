@@ -1,16 +1,25 @@
 # launch/multi_robot.launch.py
 import os
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription, ExecuteProcess, TimerAction
+from launch.actions import (IncludeLaunchDescription, ExecuteProcess,
+                             TimerAction, DeclareLaunchArgument)
 from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
 
 def generate_launch_description():
     pkg  = get_package_share_directory('multi_robot_coordinator')
-    spawn = os.path.join(pkg, 'launch', 'spawn_robot.launch.py')
+    spawn   = os.path.join(pkg, 'launch', 'spawn_robot.launch.py')
+    nav2    = os.path.join(pkg, 'launch', 'nav2_robot.launch.py')
 
-    # Start Gazebo with your existing world
+    map_yaml = LaunchConfiguration('map_yaml')
+
+    # Your existing map — point to wherever Project 1 saved it
+    map_default = os.path.join(
+        os.path.expanduser('~'), 'slam_nav_ws', 'maps', 'map.yaml'
+    )
+
     gazebo = ExecuteProcess(
         cmd=['gazebo', '--verbose',
              os.path.join(pkg, 'worlds', 'room.world'),
@@ -19,7 +28,7 @@ def generate_launch_description():
         output='screen',
     )
 
-    robot_1 = IncludeLaunchDescription(
+    robot_1_spawn = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(spawn),
         launch_arguments={
             'robot_name': 'robot_1',
@@ -29,8 +38,7 @@ def generate_launch_description():
         }.items(),
     )
 
-    # Delay robot_2 by 3s — Gazebo needs robot_1 loaded first
-    robot_2 = TimerAction(
+    robot_2_spawn = TimerAction(
         period=3.0,
         actions=[IncludeLaunchDescription(
             PythonLaunchDescriptionSource(spawn),
@@ -43,27 +51,38 @@ def generate_launch_description():
         )]
     )
 
-    # Static TF: map → robot_1/odom and map → robot_2/odom
-    # (AMCL will replace these once Nav2 is up in Week 6)
-    static_tf_r1 = Node(
-        package='tf2_ros',
-        executable='static_transform_publisher',
-        name='static_tf_r1',
-        arguments=['0', '0', '0', '0', '0', '0',
-                   'map', 'robot_1/odom'],
+    # Nav2 delayed — wait for both robots and Gazebo to stabilise
+    robot_1_nav2 = TimerAction(
+        period=8.0,
+        actions=[IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(nav2),
+            launch_arguments={
+                'namespace': 'robot_1',
+                'map_yaml':  map_yaml,
+            }.items(),
+        )]
     )
-    static_tf_r2 = Node(
-        package='tf2_ros',
-        executable='static_transform_publisher',
-        name='static_tf_r2',
-        arguments=['0', '0', '0', '0', '0', '0',
-                   'map', 'robot_2/odom'],
+
+    robot_2_nav2 = TimerAction(
+        period=10.0,
+        actions=[IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(nav2),
+            launch_arguments={
+                'namespace': 'robot_2',
+                'map_yaml':  map_yaml,
+            }.items(),
+        )]
     )
 
     return LaunchDescription([
+        DeclareLaunchArgument(
+            'map_yaml',
+            default_value=map_default,
+            description='Full path to map yaml'
+        ),
         gazebo,
-        robot_1,
-        robot_2,
-        static_tf_r1,
-        static_tf_r2,
+        robot_1_spawn,
+        robot_2_spawn,
+        robot_1_nav2,
+        robot_2_nav2,
     ])
