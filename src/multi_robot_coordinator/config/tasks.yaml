@@ -1,0 +1,7 @@
+# Sample task list for the fleet coordinator.
+# Each task is a pose in the "map" frame. yaw is radians around Z.
+tasks:
+  - { x:  1.0, y:  0.5, yaw:  0.0 }
+  - { x: -0.5, y:  0.8, yaw:  1.57 }
+  - { x:  0.8, y: -0.6, yaw: -1.57 }
+  - { x: -1.0, y: -0.3, yaw:  3.14 }

@@ -34,6 +34,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
+            'fleet_coordinator = multi_robot_coordinator.fleet_coordinator:main',
         ],
     },
 )
