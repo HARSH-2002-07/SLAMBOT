@@ -1,0 +1,74 @@
+# Full Project 2 stack:
+#   sim         → Gazebo + both spawns + both Nav2 stacks (headless)
+#   poses       → one-shot; waits for Nav2 active then publishes initial poses
+#   coordinator → fleet_coordinator node (depends_on poses)
+#   metrics     → fleet_metrics node
+#
+# Run from repo root:
+#   docker compose -f docker/docker-compose.yml up --build
+#
+# Tail a specific service:
+#   docker compose -f docker/docker-compose.yml logs -f coordinator
+#
+# Notes:
+# - network_mode: host so all containers share the same ROS2 graph.
+# - `sim` runs headless (gzserver); set HEADLESS=false below and mount
+#   /tmp/.X11-unix if you want the Gazebo GUI.
+
+x-ros-env: &ros-env
+  ROS_DOMAIN_ID: 0
+  RCUTILS_LOGGING_BUFFERED_STREAM: "1"
+
+services:
+
+  sim:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.multi_robot
+      target: runtime
+    image: multi_robot_coordinator:latest
+    container_name: mrc_sim
+    environment:
+      <<: *ros-env
+    volumes:
+      - ../maps:/ros2_ws/maps:ro
+    network_mode: host
+    command: >
+      ros2 launch multi_robot_coordinator multi_robot.launch.py
+        headless:=true
+        map_yaml:=/ros2_ws/maps/map_20260410_165455.yaml
+
+  poses:
+    image: multi_robot_coordinator:latest
+    container_name: mrc_poses
+    environment:
+      <<: *ros-env
+    network_mode: host
+    depends_on:
+      - sim
+    restart: "no"
+    command: /wait_and_pose.sh
+
+  coordinator:
+    image: multi_robot_coordinator:latest
+    container_name: mrc_coordinator
+    environment:
+      <<: *ros-env
+    network_mode: host
+    depends_on:
+      poses:
+        condition: service_completed_successfully
+    command: >
+      ros2 launch multi_robot_coordinator fleet_coordinator.launch.py
+
+  metrics:
+    image: multi_robot_coordinator:latest
+    container_name: mrc_metrics
+    environment:
+      <<: *ros-env
+    network_mode: host
+    depends_on:
+      poses:
+        condition: service_completed_successfully
+    command: >
+      ros2 launch multi_robot_coordinator fleet_metrics.launch.py

@@ -12,6 +12,7 @@ find_package(rosidl_default_generators REQUIRED)
 rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/SendGoal.srv"
   "msg/FleetStatus.msg"
+  "msg/FleetMetrics.msg"
   DEPENDENCIES std_msgs
 )
 

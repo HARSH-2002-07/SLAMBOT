@@ -47,8 +47,8 @@ def yaw_to_quaternion(yaw: float):
 
 class FleetCoordinator(Node):
 
-    def __init__(self):
-        super().__init__("fleet_coordinator")
+    def __init__(self, node_name: str = "fleet_coordinator", **kwargs):
+        super().__init__(node_name, **kwargs)
 
         self.declare_parameter("robot_names", ["robot_1", "robot_2"])
         self.declare_parameter("task_file", "")
@@ -69,7 +69,8 @@ class FleetCoordinator(Node):
         )
 
         self._cb_group = ReentrantCallbackGroup()
-        self._lock = threading.Lock()
+        # RLock so _publish_status() can be called from inside already-locked sections.
+        self._lock = threading.RLock()
         self._queue: List[Task] = []
         self._task_counter = 0
 
@@ -183,6 +184,7 @@ class FleetCoordinator(Node):
             self._queue.pop(0)
             self._states[robot] = STATE_BUSY
 
+        self._publish_status()
         self._send_goal_async(robot, task)
 
     def _pick_nearest(self, idle_robots: List[str], task: Task) -> Optional[str]:
@@ -268,6 +270,7 @@ class FleetCoordinator(Node):
             self.get_logger().info(f"{robot}: {task.task_id} SUCCEEDED")
             with self._lock:
                 self._states[robot] = STATE_IDLE
+            self._publish_status()
         else:
             self.get_logger().warn(
                 f"{robot}: {task.task_id} finished with status={status}"
@@ -287,6 +290,7 @@ class FleetCoordinator(Node):
                 self.get_logger().error(
                     f"dropping {task.task_id} after retries ({reason})"
                 )
+        self._publish_status()
 
     def _publish_status(self):
         msg = FleetStatus()

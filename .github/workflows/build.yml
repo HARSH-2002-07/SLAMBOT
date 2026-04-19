@@ -45,3 +45,55 @@ jobs:
             bash -c "source /opt/ros/humble/setup.bash && \
                      source /ros2_ws/install/setup.bash && \
                      ros2 pkg executables slam_nav_robot"
+
+  build_multi_robot:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker
+
+      - name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache-mrc
+          key: ${{ runner.os }}-buildx-mrc-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-mrc-
+
+      - name: Build Project 2 Docker image
+        run: |
+          docker build \
+            --target builder \
+            -f docker/Dockerfile.multi_robot \
+            -t multi_robot_coordinator:ci .
+
+      - name: Verify colcon install is sourceable
+        run: |
+          docker run --rm multi_robot_coordinator:ci \
+            bash -c "source /opt/ros/humble/setup.bash && \
+                     source /ros2_ws/install/setup.bash && \
+                     echo 'BUILD OK'"
+
+      - name: Check coordinator entry points exist
+        run: |
+          docker run --rm multi_robot_coordinator:ci \
+            bash -c "source /opt/ros/humble/setup.bash && \
+                     source /ros2_ws/install/setup.bash && \
+                     ros2 pkg executables multi_robot_coordinator | \
+                       grep -E 'fleet_coordinator|fleet_metrics'"
+
+      - name: Check custom interfaces are registered
+        run: |
+          docker run --rm multi_robot_coordinator:ci \
+            bash -c "source /opt/ros/humble/setup.bash && \
+                     source /ros2_ws/install/setup.bash && \
+                     ros2 interface show multi_robot_coordinator_interfaces/srv/SendGoal && \
+                     ros2 interface show multi_robot_coordinator_interfaces/msg/FleetStatus && \
+                     ros2 interface show multi_robot_coordinator_interfaces/msg/FleetMetrics"

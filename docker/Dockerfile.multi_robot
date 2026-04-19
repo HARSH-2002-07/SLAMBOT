@@ -1,0 +1,76 @@
+# ─────────────────────────────────────────────────────────────
+# Project 2 — Multi-Robot Coordinator
+#
+# Multi-stage build. Base layer holds all apt deps (ROS2 Humble +
+# Gazebo + Nav2). Builder copies the two project-2 packages and
+# compiles them. Runtime copies only the install/ tree.
+# ─────────────────────────────────────────────────────────────
+
+FROM ros:humble-ros-base AS base
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV ROS_DISTRO=humble
+
+RUN apt-get update && apt-get install -y \
+      ros-humble-gazebo-ros-pkgs \
+      ros-humble-gazebo-ros2-control \
+      ros-humble-nav2-bringup \
+      ros-humble-navigation2 \
+      ros-humble-xacro \
+      ros-humble-robot-state-publisher \
+      ros-humble-joint-state-publisher \
+      python3-colcon-common-extensions \
+      python3-rosdep \
+      python3-yaml \
+      python3-pip \
+    && rm -rf /var/lib/apt/lists/*
+
+# ─────────────────────────────────────────────────────────────
+FROM base AS builder
+
+WORKDIR /ros2_ws
+
+# Copy manifests first for better layer caching on source-only changes.
+COPY src/multi_robot_coordinator_interfaces/package.xml \
+     src/multi_robot_coordinator_interfaces/CMakeLists.txt \
+     src/multi_robot_coordinator_interfaces/
+COPY src/multi_robot_coordinator/package.xml \
+     src/multi_robot_coordinator/setup.py \
+     src/multi_robot_coordinator/setup.cfg \
+     src/multi_robot_coordinator/
+
+RUN . /opt/ros/humble/setup.sh && \
+    rosdep update && \
+    rosdep install --from-paths src --ignore-src -r -y
+
+# Full source copy.
+COPY src/multi_robot_coordinator_interfaces/ src/multi_robot_coordinator_interfaces/
+COPY src/multi_robot_coordinator/            src/multi_robot_coordinator/
+
+# Interfaces must be built before the coordinator package that depends on them.
+RUN . /opt/ros/humble/setup.sh && \
+    colcon build \
+        --packages-select multi_robot_coordinator_interfaces \
+        --cmake-args -DCMAKE_BUILD_TYPE=Release && \
+    . install/setup.sh && \
+    colcon build \
+        --packages-select multi_robot_coordinator \
+        --cmake-args -DCMAKE_BUILD_TYPE=Release && \
+    rm -rf build/ log/
+
+# ─────────────────────────────────────────────────────────────
+FROM base AS runtime
+
+WORKDIR /ros2_ws
+
+COPY --from=builder /ros2_ws/install ./install
+
+RUN echo "source /opt/ros/humble/setup.bash" >> /root/.bashrc && \
+    echo "source /ros2_ws/install/setup.bash" >> /root/.bashrc
+
+COPY docker/entrypoint.sh /entrypoint.sh
+COPY docker/wait_and_pose.sh /wait_and_pose.sh
+RUN chmod +x /entrypoint.sh /wait_and_pose.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["bash"]

@@ -3,6 +3,7 @@ import os
 from launch import LaunchDescription
 from launch.actions import (IncludeLaunchDescription, ExecuteProcess,
                              TimerAction, DeclareLaunchArgument)
+from launch.conditions import IfCondition, UnlessCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
@@ -14,18 +15,26 @@ def generate_launch_description():
     nav2    = os.path.join(pkg, 'launch', 'nav2_robot.launch.py')
 
     map_yaml = LaunchConfiguration('map_yaml')
+    headless = LaunchConfiguration('headless')
 
     # Your existing map — point to wherever Project 1 saved it
     map_default = os.path.join(
         os.path.expanduser('~'), 'slam_nav_ws', 'maps', 'map.yaml'
     )
 
-    gazebo = ExecuteProcess(
-        cmd=['gazebo', '--verbose',
-             os.path.join(pkg, 'worlds', 'room.world'),
-             '-s', 'libgazebo_ros_factory.so',
-             '-s', 'libgazebo_ros_init.so'],
+    world_path = os.path.join(pkg, 'worlds', 'room.world')
+    gazebo_plugins = ['-s', 'libgazebo_ros_factory.so',
+                      '-s', 'libgazebo_ros_init.so']
+
+    gazebo_gui = ExecuteProcess(
+        cmd=['gazebo', '--verbose', world_path, *gazebo_plugins],
         output='screen',
+        condition=UnlessCondition(headless),
+    )
+    gazebo_headless = ExecuteProcess(
+        cmd=['gzserver', '--verbose', world_path, *gazebo_plugins],
+        output='screen',
+        condition=IfCondition(headless),
     )
 
     robot_1_spawn = IncludeLaunchDescription(
@@ -80,7 +89,13 @@ def generate_launch_description():
             default_value=map_default,
             description='Full path to map yaml'
         ),
-        gazebo,
+        DeclareLaunchArgument(
+            'headless',
+            default_value='false',
+            description='If true, run gzserver only (no Gazebo GUI client)'
+        ),
+        gazebo_gui,
+        gazebo_headless,
         robot_1_spawn,
         robot_2_spawn,
         robot_1_nav2,
