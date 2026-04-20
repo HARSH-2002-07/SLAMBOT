@@ -32,7 +32,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            # Populated as Week 10 nodes come online.
+            'vlm_grounder = vlm_nav_robot.vlm_grounder:main',
         ],
     },
 )
