@@ -20,3 +20,8 @@ __pycache__/
 *.swp
 *.pdf
 *.gv
+
+# Secrets — never commit API keys
+.env
+*.env
+src/vlm_nav_robot/.env

@@ -1,0 +1,116 @@
+<?xml version="1.0"?>
+<sdf version="1.6">
+  <world name="vlm_room">
+
+    <physics type="ode">
+      <real_time_update_rate>1000.0</real_time_update_rate>
+      <max_step_size>0.001</max_step_size>
+    </physics>
+
+    <include>
+      <uri>model://sun</uri>
+    </include>
+    <include>
+      <uri>model://ground_plane</uri>
+    </include>
+
+    <!-- 6x6 arena — smaller than Project 2's so the camera sees objects -->
+    <model name="wall_north">
+      <static>true</static>
+      <pose>0 3 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>6 0.1 1</size></box></geometry></collision>
+        <visual name="vis"><geometry><box><size>6 0.1 1</size></box></geometry>
+          <material><ambient>0.8 0.8 0.8 1</ambient></material></visual>
+      </link>
+    </model>
+
+    <model name="wall_south">
+      <static>true</static>
+      <pose>0 -3 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>6 0.1 1</size></box></geometry></collision>
+        <visual name="vis"><geometry><box><size>6 0.1 1</size></box></geometry>
+          <material><ambient>0.8 0.8 0.8 1</ambient></material></visual>
+      </link>
+    </model>
+
+    <model name="wall_east">
+      <static>true</static>
+      <pose>3 0 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>0.1 6 1</size></box></geometry></collision>
+        <visual name="vis"><geometry><box><size>0.1 6 1</size></box></geometry>
+          <material><ambient>0.8 0.8 0.8 1</ambient></material></visual>
+      </link>
+    </model>
+
+    <model name="wall_west">
+      <static>true</static>
+      <pose>-3 0 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>0.1 6 1</size></box></geometry></collision>
+        <visual name="vis"><geometry><box><size>0.1 6 1</size></box></geometry>
+          <material><ambient>0.8 0.8 0.8 1</ambient></material></visual>
+      </link>
+    </model>
+
+    <!-- ═══ TARGET OBJECTS (saturated colours — easy for the VLM) ═══ -->
+    <!-- Red cube — front-left quadrant -->
+    <model name="red_block">
+      <static>true</static>
+      <pose>1.5 1.0 0.2 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>0.4 0.4 0.4</size></box></geometry></collision>
+        <visual name="vis"><geometry><box><size>0.4 0.4 0.4</size></box></geometry>
+          <material>
+            <ambient>0.8 0.05 0.05 1</ambient>
+            <diffuse>0.9 0.1 0.1 1</diffuse>
+          </material></visual>
+      </link>
+    </model>
+
+    <!-- Green cube — front-right quadrant -->
+    <model name="green_block">
+      <static>true</static>
+      <pose>1.5 -1.2 0.2 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><box><size>0.4 0.4 0.4</size></box></geometry></collision>
+        <visual name="vis"><geometry><box><size>0.4 0.4 0.4</size></box></geometry>
+          <material>
+            <ambient>0.05 0.6 0.15 1</ambient>
+            <diffuse>0.1 0.75 0.2 1</diffuse>
+          </material></visual>
+      </link>
+    </model>
+
+    <!-- Blue cylinder — rear-left -->
+    <model name="blue_cylinder">
+      <static>true</static>
+      <pose>-1.5 1.3 0.3 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><cylinder><radius>0.2</radius><length>0.6</length></cylinder></geometry></collision>
+        <visual name="vis"><geometry><cylinder><radius>0.2</radius><length>0.6</length></cylinder></geometry>
+          <material>
+            <ambient>0.1 0.15 0.8 1</ambient>
+            <diffuse>0.15 0.2 0.9 1</diffuse>
+          </material></visual>
+      </link>
+    </model>
+
+    <!-- Yellow cylinder — rear-right -->
+    <model name="yellow_cylinder">
+      <static>true</static>
+      <pose>-1.5 -1.0 0.3 0 0 0</pose>
+      <link name="link">
+        <collision name="col"><geometry><cylinder><radius>0.2</radius><length>0.6</length></cylinder></geometry></collision>
+        <visual name="vis"><geometry><cylinder><radius>0.2</radius><length>0.6</length></cylinder></geometry>
+          <material>
+            <ambient>0.9 0.8 0.1 1</ambient>
+            <diffuse>1.0 0.9 0.15 1</diffuse>
+          </material></visual>
+      </link>
+    </model>
+
+  </world>
+</sdf>
