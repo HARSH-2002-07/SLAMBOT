@@ -297,7 +297,7 @@
       <update_rate>15</update_rate>
       <visualize>false</visualize>
       <camera name="rgbd">
-        <horizontal_fov>1.0472</horizontal_fov>
+        <horizontal_fov>1.5708</horizontal_fov>
         <image>
           <width>640</width>
           <height>480</height>

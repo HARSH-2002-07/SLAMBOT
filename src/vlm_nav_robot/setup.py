@@ -33,6 +33,7 @@ setup(
     entry_points={
         'console_scripts': [
             'vlm_grounder = vlm_nav_robot.vlm_grounder:main',
+            'hybrid_grounder = vlm_nav_robot.hybrid_grounder:main',
         ],
     },
 )

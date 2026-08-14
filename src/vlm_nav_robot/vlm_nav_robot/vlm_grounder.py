@@ -318,7 +318,12 @@ class VLMGrounder(Node):
         patch = depth_arr[iy1:iy2, ix1:ix2]
         valid = patch[np.isfinite(patch) & (patch > 0.05)]
         if valid.size == 0:
-            return None
+            # Upper-region had no valid depth (e.g. bbox clips top edge of frame).
+            # Fall back to full bbox before giving up.
+            full = depth_arr[y1:y2, x1:x2]
+            valid = full[np.isfinite(full) & (full > 0.05)]
+            if valid.size == 0:
+                return None
         return float(np.median(valid))
 
     def _gemini_detect(self, pil_img: PIL.Image.Image,
