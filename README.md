@@ -2,11 +2,11 @@
 
 [![Build and verify](https://github.com/HARSH-2002-07/slam_nav_ws/actions/workflows/build.yml/badge.svg)](https://github.com/HARSH-2002-07/slam_nav_ws/actions/workflows/build.yml)
 
-Two self-contained ROS2 Humble projects sharing a single colcon workspace:
+Three self-contained ROS2 Humble projects sharing a single colcon workspace:
 
 1. **Project 1 — SLAM Navigation Stack** *(complete)* — a single differential-drive robot maps an unknown room with `slam_toolbox`, saves the map, then navigates autonomously through 4 waypoints using Nav2.
 2. **Project 2 — Multi-Robot Coordination System** *(complete)* — two namespaced robots share the same map, each runs its own Nav2 lifecycle stack, and a central Python coordinator dispatches tasks nearest-robot-first over `NavigateToPose` action clients.
-3. **Project 3 — Vision-Language Robot Controller** *(planned)* — single-robot controller driven by a multimodal LLM (Ollama/LLaVA) turning natural-language commands into `NavigateToPose` goals.
+3. **Project 3 — Vision-Language Robot Controller** *(complete)* — single-robot controller that turns natural-language target descriptions ("red box", "blue cylinder") into `NavigateToPose` goals, grounded by Google Gemini 2.5 Flash on live RGB-D camera frames.
 
 ---
 
@@ -17,10 +17,58 @@ Two self-contained ROS2 Humble projects sharing a single colcon workspace:
 | ROS2 Humble | Middleware |
 | Gazebo Classic 11.10 | Simulation |
 | SLAM Toolbox | Online mapping (Project 1) |
-| Nav2 | Autonomous navigation (both projects) |
+| Nav2 | Autonomous navigation (all three projects) |
+| Google Gemini 2.5 Flash | Vision-language object grounding (Project 3) |
 | RViz2 | Visualisation |
-| Docker + Compose | Reproducible stack (both projects) |
-| GitHub Actions | CI: builds both images, verifies entry points and interfaces |
+| Docker + Compose | Reproducible stack (Projects 1 & 2) |
+| GitHub Actions | CI: builds all images, verifies entry points and interfaces |
+
+---
+
+## Project 3 — Vision-Language Robot Controller
+
+A robot inside Gazebo accepts a natural-language target ("red box", "blue cylinder") over a ROS 2 service. The pipeline:
+
+1. Grabs the latest RGB + depth frame + `camera_info`
+2. Sends the RGB frame to **Gemini 2.5 Flash** with a schema-validated JSON prompt asking for a 2D bounding box around the named object
+3. Back-projects the bbox centre pixel through the depth frame into a 3D point in the camera's optical frame (upper-60%-of-bbox depth sampling avoids floor leakage on ground-sitting objects)
+4. TF2-transforms that point into the `map` frame
+5. Computes a standoff goal 0.3 m short of the target so Nav2 doesn't plan into the object's surface
+6. Sends a `NavigateToPose` action goal and returns the computed `PoseStamped` via the service
+
+Full pipeline detail, parameter reference, and troubleshooting log: [`docs/vlm_nav_robot.md`](docs/vlm_nav_robot.md).
+
+### Quick start (native, 4 terminals)
+
+```bash
+colcon build --packages-select vlm_nav_robot_interfaces
+source install/setup.bash
+colcon build --packages-select vlm_nav_robot --symlink-install
+source install/setup.bash
+export GEMINI_API_KEY="your-key"
+
+# T1 — full stack (Gazebo + Nav2 + grounder)
+ros2 launch vlm_nav_robot vlm_full.launch.py
+
+# T2 — after "Managed nodes are active", set initial pose (see docs/vlm_nav_robot.md §9)
+
+# T3 — RViz2 (optional), Fixed Frame: map
+
+# T4 — call the service
+ros2 service call /vlm_grounder/find_and_go \
+  vlm_nav_robot_interfaces/srv/FindAndGo "{target: 'red box'}"
+```
+
+### Interfaces
+
+```
+# FindAndGo.srv
+string target
+---
+bool   success
+string reason
+geometry_msgs/PoseStamped goal
+```
 
 ---
 
@@ -113,11 +161,23 @@ Covers: service wiring, happy-path drain, two-robot parallelism, abort → retry
 
 ---
 
-## Project 1 — SLAM Navigation Stack *(archived, still in tree)*
+## Project 1 — SLAM Navigation Stack
 
 Single differential-drive robot. SLAM Toolbox runs in online mode while the user drives the robot around `room.world` with teleop, then the map is saved to `maps/`. A second launch brings up Nav2 (AMCL localisation, NavFn planner, DWB controller), and a waypoint runner sends the robot through 4 autonomous goals.
 
 Docker + CI for Project 1 live at the repo root (`Dockerfile`, `docker-compose.yml`).
+
+### Quick start (Docker)
+
+```bash
+docker compose up --build
+```
+
+### Tests
+
+```bash
+python3 -m pytest src/slam_nav_robot/test/ -v
+```
 
 ---
 
@@ -128,17 +188,21 @@ slam_nav_ws/
 ├── src/
 │   ├── slam_nav_robot/                         # Project 1 package
 │   ├── multi_robot_coordinator/                # Project 2 main package
-│   └── multi_robot_coordinator_interfaces/     # Project 2 custom msgs/srvs
+│   ├── multi_robot_coordinator_interfaces/     # Project 2 custom msgs/srvs
+│   ├── vlm_nav_robot/                          # Project 3 main package
+│   └── vlm_nav_robot_interfaces/               # Project 3 custom srv (FindAndGo)
 ├── docker/                                     # Project 2 Docker stack
 │   ├── Dockerfile.multi_robot
 │   ├── docker-compose.yml
 │   ├── entrypoint.sh
 │   └── wait_and_pose.sh
+├── docs/
+│   └── vlm_nav_robot.md                        # Project 3 full reference doc
 ├── Dockerfile                                  # Project 1 image
-├── docker-compose.yml                          # Project 1 stack
-├── maps/                                       # saved SLAM maps (reused by Project 2)
-├── .github/workflows/build.yml                 # 2 CI jobs: build, build_multi_robot
-├── CLAUDE.md                                   # context handoff for Claude Code
+├── docker-compose.yml                          # Project 1 Docker stack (root)
+├── maps/                                       # saved SLAM maps (reused by Projects 2 & 3)
+├── .github/workflows/build.yml                 # CI: build, build_multi_robot (+ build_vlm_robot pending)
+├── CLAUDE.md                                   # project memory / context handoff
 └── README.md                                   # this file
 ```
 
@@ -146,12 +210,13 @@ slam_nav_ws/
 
 ## CI
 
-GitHub Actions builds both Docker images on every push to `main` and every PR. Two independent jobs:
+GitHub Actions builds Docker images on every push to `main` and every PR.
 
 - `build` — `Dockerfile` (Project 1); verifies colcon install sources and entry points are discoverable
 - `build_multi_robot` — `docker/Dockerfile.multi_robot` (Project 2); additionally verifies all three custom interfaces (`SendGoal`, `FleetStatus`, `FleetMetrics`) are registered and `fleet_coordinator` / `fleet_metrics` entry points exist
+- `build_vlm_robot` *(pending)* — will build `vlm_nav_robot` + `vlm_nav_robot_interfaces` and verify the `FindAndGo` interface and `vlm_grounder` entry point, mirroring the two jobs above
 
-Separate buildx caches per job keep either from invalidating the other.
+Separate buildx caches per job keep any one job from invalidating the others.
 
 ---
 
