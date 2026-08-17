@@ -135,7 +135,7 @@ def generate_launch_description():
             'goal_frame': 'map',
             'robot_base_frame': 'base_footprint',
             'confidence_threshold': 0.5,
-            'standoff_m': 0.3,
+            'standoff_m': 0.15,
         }],
     )
     # Give Nav2 time to activate before the grounder tries to connect to the action server.
