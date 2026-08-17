@@ -44,6 +44,9 @@ MAX_ATTEMPTS = 3
 PROMPT_TEMPLATE = (
     "Detect the 2D bounding box of the single best match for this target "
     "in the image: {target!r}. "
+    "Return exactly one object with fields: "
+    "label (str), box_2d ([y_min, x_min, y_max, x_max] normalized 0-1000), "
+    "confidence (0.0-1.0), notes (short str). "
     "If the target is not visible, set confidence to 0.0 and box_2d to "
     "[0, 0, 0, 0]."
 )
@@ -310,7 +313,9 @@ class VLMGrounder(Node):
         if x2 <= x1 or y2 <= y1:
             return None
         bw, bh = x2 - x1, y2 - y1
-        sx = bw // 5
+        sx = bw // 3          # was bw // 5 — tighter horizontal inset,
+                               # pulls further away from bbox edges where
+                               # background is most likely to leak in
         ix1, ix2 = x1 + sx, x2 - sx
         iy1, iy2 = y1, y1 + (bh * 6) // 10
         if ix2 <= ix1 or iy2 <= iy1:
@@ -318,13 +323,15 @@ class VLMGrounder(Node):
         patch = depth_arr[iy1:iy2, ix1:ix2]
         valid = patch[np.isfinite(patch) & (patch > 0.05)]
         if valid.size == 0:
-            # Upper-region had no valid depth (e.g. bbox clips top edge of frame).
-            # Fall back to full bbox before giving up.
             full = depth_arr[y1:y2, x1:x2]
             valid = full[np.isfinite(full) & (full > 0.05)]
             if valid.size == 0:
                 return None
-        return float(np.median(valid))
+        # 25th percentile instead of median: when background leaks into
+        # the sampled patch, it reads *farther* than the object (it's
+        # behind it), so biasing toward the nearer cluster of depth
+        # values favors the actual target surface over leaked background.
+        return float(np.percentile(valid, 25))
 
     def _gemini_detect(self, pil_img: PIL.Image.Image,
                        target: str) -> dict:
